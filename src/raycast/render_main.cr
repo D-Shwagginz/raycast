@@ -3,8 +3,8 @@ module Raycast
     class_getter screen_width : Int32 = 1024
     class_getter screen_height : Int32 = 768
 
-    class_getter game_width : Int32 = 320
-    class_getter game_height : Int32 = 180
+    class_getter game_width : Int32 = 400
+    class_getter game_height : Int32 = 225
 
     @rendertarget : Raylib::RenderTexture2D
 
