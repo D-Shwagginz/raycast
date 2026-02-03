@@ -8,6 +8,7 @@ module Raycast
 
   class_getter rsrc_dir : String = DEV_BUILD ? "./rsrc/" : "./"
   class_getter images_dir : String = rsrc_dir + "images/"
+  class_getter sprites_dir : String = rsrc_dir + "images/sprites/"
 
   @@game : Game | Nil
 

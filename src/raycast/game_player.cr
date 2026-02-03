@@ -16,7 +16,7 @@ module Raycast
         Raycast.throw_exception(Player::PlayerSpawnNotFound.new("Player spawn not found"))
       end
       player_spawn = player_spawn.as(Object)
-      player_obj = Object.new(Object::Objects::Player, player_spawn.x, player_spawn.y, player_spawn.dir_x, player_spawn.dir_y)
+      player_obj = Object.new(Object::Objects::Player, player_spawn.x, player_spawn.y, player_spawn.dir_x, player_spawn.dir_y, Object::Sprite::Sprites::None)
       return Player.new(player_obj)
     end
 

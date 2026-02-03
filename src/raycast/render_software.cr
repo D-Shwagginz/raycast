@@ -5,7 +5,10 @@ module Raycast
       class_property plane_x : Float64 = 0.0
       class_property plane_y : Float64 = 0.0
 
+      @@z_buffer : Array(Float64) = Array(Float64).new(Render.game_width + 1, 0.0)
+
       def self.render(map : Map, objects : Array(Object), player : Player)
+        # Floors and Ceilings
         (Render.game_height - Render.game_height // 2 + 1).times do |y|
           y += Render.game_height // 2 + 1
 
@@ -47,7 +50,7 @@ module Raycast
               ty = (floor_image.height * (-floor_y - cell_y)).to_i & (floor_image.height - 1)
 
               color = Raylib.get_image_color(floor_image, tx, ty)
-              Raylib.draw_pixel(x, y, color)
+              Raylib.draw_pixel(x, y - 1, color)
             end
 
             if map.ceilings[cell_x + cell_y*map.size_x]? &&
@@ -66,6 +69,7 @@ module Raycast
           end
         end
 
+        # Walls
         (Render.game_width + 1).times do |x|
           camera_x = 2 * x / Render.game_width.to_f64 - 1
           ray_dir_x = player.object.dir_x + @@plane_x * camera_x
@@ -151,6 +155,55 @@ module Raycast
             Raylib::Rectangle.new(x: tex_x, y: tex_y, width: 1, height: texture.height),
             Raylib::Rectangle.new(x: x, y: draw_start, width: 1, height: (draw_end - draw_start)),
             Raylib::Vector2.new, 0.0, Raylib::WHITE)
+
+          @@z_buffer[x] = perp_wall_dist.to_f64
+        end
+
+        # Objects
+        objects_to_draw = [] of Object
+        objects.each do |object|
+          if object.sprite.sprite != Object::Sprite::Sprites::None
+            objects_to_draw << object
+          end
+        end
+        objects_to_draw.sort! do |o1, o2|
+          dist1 = ((player.object.x - o1.x) * (player.object.x - o1.x) + (player.object.y - o1.y) * (player.object.y - o1.y))
+          dist2 = ((player.object.x - o2.x) * (player.object.x - o2.x) + (player.object.y - o2.y) * (player.object.y - o2.y))
+          dist2 <=> dist1
+        end
+
+        objects_to_draw.each do |object|
+          sprite_x = object.x - player.object.x
+          sprite_y = -(object.y - player.object.y)
+
+          inv_det = 1.0 / (@@plane_x * player.object.dir_y - player.object.dir_x * @@plane_y)
+
+          transform_x = inv_det * (player.object.dir_y * sprite_x - player.object.dir_x * sprite_y)
+          transform_y = inv_det * (-@@plane_y * sprite_x + @@plane_x * sprite_y) + 0.0001
+          sprite_screen_x = (Render.game_width / 2).to_i * (1 + transform_x / transform_y)
+
+          sprite_height = (Render.game_height / transform_y).to_i.abs
+          draw_start_y = -sprite_height // 2 + Render.game_height // 2
+          draw_end_y = sprite_height // 2 + Render.game_height // 2
+
+          sprite_width = (Render.game_height / transform_y).to_i.abs
+          draw_start_x = -sprite_width // 2 + sprite_screen_x
+          draw_end_x = sprite_width // 2 + sprite_screen_x
+
+          sprite_texture = object.sprite.get_texture(map)
+
+          (draw_end_x - draw_start_x).to_i.times do |stripe|
+            stripe += draw_start_x.to_i
+            if transform_y > 0 && stripe > 0 && stripe < Render.game_width && transform_y < @@z_buffer[stripe]
+              tex_x = (256 * (stripe - (-sprite_width / 2 + sprite_screen_x)) * sprite_texture.width / sprite_width).to_i / 256
+
+              Raylib.draw_texture_pro(
+                sprite_texture,
+                Raylib::Rectangle.new(x: tex_x, y: 0, width: 1, height: sprite_texture.height),
+                Raylib::Rectangle.new(x: stripe, y: draw_start_y, width: 1, height: (draw_end_y - draw_start_y)),
+                Raylib::Vector2.new, 0.0, Raylib::WHITE)
+            end
+          end
         end
       end
     end

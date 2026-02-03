@@ -12,6 +12,7 @@ module Raycast
 
     getter loaded_floor_images : Hash(String, Raylib::Image) = Hash(String, Raylib::Image).new
     getter loaded_wall_textures : Hash(String, Raylib::Texture2D) = Hash(String, Raylib::Texture2D).new
+    getter loaded_sprite_textures : Hash(String, Raylib::Texture2D) = Hash(String, Raylib::Texture2D).new
 
     class MapNotFound < Exception
     end
@@ -20,6 +21,12 @@ module Raycast
     end
 
     class MapWallImageNotFound < Exception
+    end
+
+    class MapFloorImageNotFound < Exception
+    end
+
+    class MapSpriteFrameImageNotFound < Exception
     end
 
     def initialize(@name : String, @size_x : Int32, @size_y : Int32, @floors : Array(MapFloors), @ceilings : Array(MapFloors), @walls : Array(MapWalls), @things : Array(MapThings))
@@ -88,7 +95,7 @@ module Raycast
       map.floors.each do |floor|
         img_name = floor_textures[floor]
         unless map.loaded_floor_images.has_key?(img_name) || img_name == ""
-          Raycast.throw_exception(MapWallImageNotFound.new("Map floor texture '#{Raycast.images_dir + img_name + ".PNG"}' not found")) unless File.exists?(Raycast.images_dir + img_name + ".PNG")
+          Raycast.throw_exception(MapFloorImageNotFound.new("Map floor texture '#{Raycast.images_dir + img_name + ".PNG"}' not found")) unless File.exists?(Raycast.images_dir + img_name + ".PNG")
           map.loaded_floor_images[img_name] = Raylib.load_image(Raycast.images_dir + img_name + ".PNG")
         end
       end
@@ -96,7 +103,7 @@ module Raycast
       map.ceilings.each do |floor|
         img_name = floor_textures[floor]
         unless map.loaded_floor_images.has_key?(img_name) || img_name == ""
-          Raycast.throw_exception(MapWallImageNotFound.new("Map floor texture '#{Raycast.images_dir + img_name + ".PNG"}' not found")) unless File.exists?(Raycast.images_dir + img_name + ".PNG")
+          Raycast.throw_exception(MapFloorImageNotFound.new("Map floor texture '#{Raycast.images_dir + img_name + ".PNG"}' not found")) unless File.exists?(Raycast.images_dir + img_name + ".PNG")
           map.loaded_floor_images[img_name] = Raylib.load_image(Raycast.images_dir + img_name + ".PNG")
         end
       end
@@ -106,6 +113,13 @@ module Raycast
         unless map.loaded_wall_textures.has_key?(img_name) || img_name == ""
           Raycast.throw_exception(MapWallImageNotFound.new("Map wall texture '#{Raycast.images_dir + img_name + ".PNG"}' not found")) unless File.exists?(Raycast.images_dir + img_name + ".PNG")
           map.loaded_wall_textures[img_name] = Raylib.load_texture(Raycast.images_dir + img_name + ".PNG")
+        end
+      end
+
+      Object::Sprite::Frame.frame_textures.each do |frame, texture|
+        unless map.loaded_sprite_textures.has_key?(texture) || texture == ""
+          Raycast.throw_exception(MapSpriteFrameImageNotFound.new("Sprite frame texture '#{Raycast.sprites_dir + texture + ".PNG"}' not found")) unless File.exists?(Raycast.sprites_dir + texture + ".PNG")
+          map.loaded_sprite_textures[texture] = Raylib.load_texture(Raycast.sprites_dir + texture + ".PNG")
         end
       end
 
