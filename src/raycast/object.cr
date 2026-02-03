@@ -1,9 +1,16 @@
 module Raycast
   class Object
+    OBJECT_SIZE = 0.3
+
     enum Objects
       Player
       PlayerSpawn
       Barrel
+    end
+
+    @[Flags]
+    enum Flags
+      NonPassable
     end
 
     getter type : Objects
@@ -14,11 +21,22 @@ module Raycast
     property dir_right_x : Float64
     property dir_right_y : Float64
     property sprite : Sprite
+    getter flags : Flags
 
-    def initialize(@type : Objects, @x : Float32, @y : Float32, @dir_x : Float64, @dir_y : Float64, sprite : Sprite::Sprites)
-      @sprite = Sprite.new(sprite)
+    def initialize(@type : Objects, @x : Float32, @y : Float32, @dir_x : Float64, @dir_y : Float64)
+      obj_def = ObjDef.defs[@type]
+      @sprite = Sprite.new(obj_def.starting_sprite)
+      @flags = obj_def.flags
+
       @dir_right_x = @dir_x * Math.cos(-1.5708) - @dir_y * Math.sin(-1.5708)
       @dir_right_y = @dir_x * Math.sin(-1.5708) + @dir_y * Math.cos(-1.5708)
+    end
+
+    def self.is_colliding?(x0 : Float32, y0 : Float32, x1 : Float32, y1 : Float32) : Bool
+      return Raylib.check_collision_circles?(
+        Raylib::Vector2.new(x: x0, y: y0), OBJECT_SIZE,
+        Raylib::Vector2.new(x: x1, y: y1), OBJECT_SIZE
+      )
     end
 
     def self.spawn(x : Int32, y : Int32, thing : Map::MapThings) : self | Nil
@@ -29,29 +47,29 @@ module Raycast
         Render::Software.plane_x = Render::Software::DEFAULT_PLANE_LENGTH
 
         return Object.new(
-          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, 1.0, Sprite::Sprites::None
+          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, 1.0
         )
       when Map::MapThings::PlayerSpawnEast
         Render::Software.plane_y = -Render::Software::DEFAULT_PLANE_LENGTH
 
         return Object.new(
-          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 1.0, 0.0, Sprite::Sprites::None
+          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 1.0, 0.0
         )
       when Map::MapThings::PlayerSpawnSouth
         Render::Software.plane_x = -Render::Software::DEFAULT_PLANE_LENGTH
 
         return Object.new(
-          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, -1.0, Sprite::Sprites::None
+          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, -1.0
         )
       when Map::MapThings::PlayerSpawnWest
         Render::Software.plane_y = Render::Software::DEFAULT_PLANE_LENGTH
 
         return Object.new(
-          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, -1.0, 0.0, Sprite::Sprites::None
+          Objects::PlayerSpawn, x.to_f32 + 0.5, y.to_f32 + 0.5, -1.0, 0.0
         )
       when Map::MapThings::Barrel
         return Object.new(
-          Objects::Barrel, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, 0.0, Sprite::Sprites::Barrel
+          Objects::Barrel, x.to_f32 + 0.5, y.to_f32 + 0.5, 0.0, 0.0
         )
       end
     end

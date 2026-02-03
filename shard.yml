@@ -7,6 +7,8 @@ authors:
 targets:
   raycast:
     main: src/raycast.cr
+  build:
+    main: src/raybuild.cr
 
 dependencies:
   raylib-cr:

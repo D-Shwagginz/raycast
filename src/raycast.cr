@@ -3,16 +3,19 @@ require "raylib-cr"
 
 # TODO: Write documentation for `Raycast`
 module Raycast
-  DEV_BUILD = true
-  VERSION   = "0.1.0"
+  VERSION = "0.1.0"
 
-  class_getter rsrc_dir : String = DEV_BUILD ? "./rsrc/" : "./"
+  class_getter rsrc_dir : String = {% if flag?(:debug) %} "./rsrc/" {% else %} "./" {% end %}
   class_getter images_dir : String = rsrc_dir + "images/"
   class_getter sprites_dir : String = rsrc_dir + "images/sprites/"
 
   @@game : Game | Nil
 
   def self.run
+    {% unless flag?(:debug) %}
+      Raylib.set_trace_log_level(Raylib::TraceLogLevel::Error)
+    {% end %}
+
     @@game = Game.new
     @@game.as(Game).run
     @@game.as(Game).deinit

@@ -3,7 +3,7 @@ module Raycast
     class PlayerSpawnNotFound < Exception
     end
 
-    COLLISION_DIST = 0.2
+    MAP_COLLISION_DIST = 0.2
 
     getter object : Object
 
@@ -16,73 +16,168 @@ module Raycast
         Raycast.throw_exception(Player::PlayerSpawnNotFound.new("Player spawn not found"))
       end
       player_spawn = player_spawn.as(Object)
-      player_obj = Object.new(Object::Objects::Player, player_spawn.x, player_spawn.y, player_spawn.dir_x, player_spawn.dir_y, Object::Sprite::Sprites::None)
+      player_obj = Object.new(Object::Objects::Player, player_spawn.x, player_spawn.y, player_spawn.dir_x, player_spawn.dir_y)
       return Player.new(player_obj)
     end
 
-    def process_inputs(map : Map, delta_time : Float32)
+    def process_inputs(map : Map, objects : Array(Object), delta_time : Float32)
       move_speed = delta_time * 3.0
 
       if Raylib.key_down?(Raylib::KeyboardKey::W)
-        top_left = map.walls[(object.x + object.dir_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + object.dir_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x + object.dir_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + object.dir_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
+        would_collide_obj = false
 
-        object.x += object.dir_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x + object.dir_x * move_speed, object.y,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
 
-        top_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed + COLLISION_DIST).to_i]
+        unless would_collide_obj
+          top_left = map.walls[(object.x + object.dir_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + object.dir_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x + object.dir_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + object.dir_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
 
-        object.y -= object.dir_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+          object.x += object.dir_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
+        would_collide_obj = false
+
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x, object.y - object.dir_y * move_speed,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
+
+        unless would_collide_obj
+          top_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_y * move_speed + MAP_COLLISION_DIST).to_i]
+
+          object.y -= object.dir_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
       end
       if Raylib.key_down?(Raylib::KeyboardKey::S)
-        top_left = map.walls[(object.x - object.dir_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x - object.dir_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - object.dir_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x - object.dir_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
+        would_collide_obj = false
 
-        object.x -= object.dir_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x - object.dir_x * move_speed, object.y,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
 
-        top_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed + COLLISION_DIST).to_i]
+        unless would_collide_obj
+          top_left = map.walls[(object.x - object.dir_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x - object.dir_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - object.dir_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x - object.dir_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
 
-        object.y += object.dir_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+          object.x -= object.dir_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
+
+        would_collide_obj = false
+
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x, object.y + object.dir_y * move_speed,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
+
+        unless would_collide_obj
+          top_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_y * move_speed + MAP_COLLISION_DIST).to_i]
+
+          object.y += object.dir_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
       end
 
       if Raylib.key_down?(Raylib::KeyboardKey::D)
-        top_left = map.walls[(object.x + object.dir_right_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + object.dir_right_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x + object.dir_right_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + object.dir_right_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
+        would_collide_obj = false
 
-        object.x += object.dir_right_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x + object.dir_right_x * move_speed, object.y,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
 
-        top_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed + COLLISION_DIST).to_i]
+        unless would_collide_obj
+          top_left = map.walls[(object.x + object.dir_right_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + object.dir_right_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x + object.dir_right_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + object.dir_right_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
 
-        object.y -= object.dir_right_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+          object.x += object.dir_right_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
+
+        would_collide_obj = false
+
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x, object.y - object.dir_right_y * move_speed,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
+
+        unless would_collide_obj
+          top_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - object.dir_right_y * move_speed + MAP_COLLISION_DIST).to_i]
+
+          object.y -= object.dir_right_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
       end
       if Raylib.key_down?(Raylib::KeyboardKey::A)
-        top_left = map.walls[(object.x - object.dir_right_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x - object.dir_right_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - object.dir_right_x * move_speed - COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x - object.dir_right_x * move_speed + COLLISION_DIST).to_i + map.size_x*(object.y + COLLISION_DIST).to_i]
+        would_collide_obj = false
 
-        object.x -= object.dir_right_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x - object.dir_right_x * move_speed, object.y,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
 
-        top_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed - COLLISION_DIST).to_i]
-        top_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed - COLLISION_DIST).to_i]
-        bottom_left = map.walls[(object.x - COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed + COLLISION_DIST).to_i]
-        bottom_right = map.walls[(object.x + COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed + COLLISION_DIST).to_i]
+        unless would_collide_obj
+          top_left = map.walls[(object.x - object.dir_right_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x - object.dir_right_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - object.dir_right_x * move_speed - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x - object.dir_right_x * move_speed + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + MAP_COLLISION_DIST).to_i]
 
-        object.y += object.dir_right_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+          object.x -= object.dir_right_x * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
+
+        would_collide_obj = false
+
+        objects.each do |obj|
+          if obj.flags.non_passable? && Object.is_colliding?(object.x, object.y + object.dir_right_y * move_speed,
+               obj.x, obj.y)
+            would_collide_obj = true
+            break
+          end
+        end
+
+        unless would_collide_obj
+          top_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed - MAP_COLLISION_DIST).to_i]
+          top_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed - MAP_COLLISION_DIST).to_i]
+          bottom_left = map.walls[(object.x - MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed + MAP_COLLISION_DIST).to_i]
+          bottom_right = map.walls[(object.x + MAP_COLLISION_DIST).to_i + map.size_x*(object.y + object.dir_right_y * move_speed + MAP_COLLISION_DIST).to_i]
+
+          object.y += object.dir_right_y * move_speed if (top_left | top_right | bottom_left | bottom_right) == Map::MapWalls::None
+        end
       end
 
       if Raylib.get_mouse_delta.x != 0

@@ -1,7 +1,7 @@
 module Raycast
   class Render
-    class_getter screen_width : Int32 = 1024
-    class_getter screen_height : Int32 = 768
+    class_getter screen_width : Int32 = 1280
+    class_getter screen_height : Int32 = 720
 
     class_getter game_width : Int32 = 400
     class_getter game_height : Int32 = 225

@@ -35,6 +35,7 @@ module Raycast
     def deinit
       loaded_floor_images.each_value { |image| Raylib.unload_image(image) }
       loaded_wall_textures.each_value { |texture| Raylib.unload_texture(texture) }
+      loaded_sprite_textures.each_value { |texture| Raylib.unload_texture(texture) }
     end
 
     def self.frame_to_indices(map_name : String, frame_enum, frame : JSON::Any, frame_pixels : Raylib::Color*, palette : Raylib::Color*)

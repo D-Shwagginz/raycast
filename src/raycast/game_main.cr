@@ -23,7 +23,7 @@ module Raycast
       Raylib.disable_cursor
 
       while !Raylib.close_window?
-        player.process_inputs(map, Raylib.get_frame_time)
+        player.process_inputs(map, @objects, Raylib.get_frame_time)
 
         @render.render do
           Render::Software.render(map, @objects, player)
