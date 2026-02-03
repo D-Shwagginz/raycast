@@ -5,13 +5,67 @@ module Raycast
       class_property plane_x : Float64 = 0.0
       class_property plane_y : Float64 = 0.0
 
-      @@horz_weight_precomputed : Array(Float64) = [] of Float64
-
-      def self.precompute
-        (Render.game_height + 2).times { |y| @@horz_weight_precomputed << Render.game_height / (2.0 * y - Render.game_height) }
-      end
-
       def self.render(map : Map, objects : Array(Object), player : Player)
+        (Render.game_height - Render.game_height // 2 + 1).times do |y|
+          y += Render.game_height // 2 + 1
+
+          ray_dir_x0 = player.object.dir_x - @@plane_x
+          ray_dir_y0 = player.object.dir_y - @@plane_y
+          ray_dir_x1 = player.object.dir_x + @@plane_x
+          ray_dir_y1 = player.object.dir_y + @@plane_y
+
+          pos = y - Render.game_height // 2
+
+          pos_z = 0.5 * Render.game_height
+
+          row_distance = pos_z / pos
+
+          floor_step_x = row_distance * (ray_dir_x1 - ray_dir_x0) / Render.game_width
+          floor_step_y = row_distance * (ray_dir_y1 - ray_dir_y0) / Render.game_width
+
+          floor_x = player.object.x + row_distance * ray_dir_x0
+          floor_y = -player.object.y + row_distance * ray_dir_y0
+
+          new_cell = true
+
+          cell_x = 0
+          cell_y = 0
+          floor_image = map.loaded_floor_images.values[0]
+          ceiling_image = map.loaded_floor_images.values[0]
+
+          Render.game_width.times do |x|
+            new_cell = (cell_x != floor_x.to_i || cell_y != -floor_y.to_i)
+
+            cell_x = floor_x.to_i
+            cell_y = -floor_y.to_i
+
+            if map.floors[cell_x + cell_y*map.size_x]? &&
+               Map::MapFloors.new(map.floors[cell_x + cell_y*map.size_x]) != Map::MapFloors::None
+              floor_image = map.loaded_floor_images[Map.floor_textures[Map::MapFloors.new(map.floors[cell_x + cell_y*map.size_x])]] if new_cell
+
+              tx = (floor_image.width * (floor_x - cell_x)).to_i & (floor_image.width - 1)
+              ty = (floor_image.height * (-floor_y - cell_y)).to_i & (floor_image.height - 1)
+
+              color = Raylib.get_image_color(floor_image, tx, ty)
+              Raylib.draw_pixel(x, y, color)
+            end
+
+            if map.ceilings[cell_x + cell_y*map.size_x]? &&
+               Map::MapFloors.new(map.ceilings[cell_x + cell_y*map.size_x]) != Map::MapFloors::None
+              ceiling_image = map.loaded_floor_images[Map.floor_textures[Map::MapFloors.new(map.ceilings[cell_x + cell_y*map.size_x])]] if new_cell
+
+              tx = (ceiling_image.width * (floor_x - cell_x)).to_i & (ceiling_image.width - 1)
+              ty = (ceiling_image.height * (-floor_y - cell_y)).to_i & (ceiling_image.height - 1)
+
+              color = Raylib.get_image_color(ceiling_image, tx, ty)
+              Raylib.draw_pixel(x, Render.game_height - y, color)
+            end
+
+            floor_x += floor_step_x
+            floor_y += floor_step_y
+          end
+        end
+
         (Render.game_width + 1).times do |x|
           camera_x = 2 * x / Render.game_width.to_f64 - 1
           ray_dir_x = player.object.dir_x + @@plane_x * camera_x
@@ -72,11 +126,9 @@ module Raycast
           line_height = (Render.game_height / perp_wall_dist).to_i
 
           draw_start = -line_height / 2 + Render.game_height / 2
-          draw_start = 0 if draw_start < 0
           draw_end = line_height / 2 + Render.game_height / 2
-          draw_end = Render.game_height if draw_end >= Render.game_height
 
-          image = map.loaded_wall_images[Map.wall_textures[Map::MapWalls.new(map.walls[map_x + map_y*map.size_x])]]
+          texture = map.loaded_wall_textures[Map.wall_textures[Map::MapWalls.new(map.walls[map_x + map_y*map.size_x])]]
 
           wall_x = 0.0
           if side == 0
@@ -86,69 +138,19 @@ module Raycast
           end
           wall_x -= wall_x.floor
 
-          tex_x = (wall_x * image.width).to_i
-          tex_x = image.width - tex_x - 1 if side == 0 && ray_dir_x > 0
-          tex_x = image.width - tex_x - 1 if side == 1 && ray_dir_y < 0
+          tex_x = (wall_x * texture.width).to_i
+          tex_x = texture.width - tex_x - 1 if side == 0 && ray_dir_x > 0
+          tex_x = texture.width - tex_x - 1 if side == 1 && ray_dir_y < 0
 
-          step = 1.0 * image.height / line_height
+          step = 1.0 * texture.height / line_height
           tex_pos = (draw_start - Render.game_height / 2 + line_height / 2) * step
-          (draw_end - draw_start).to_i.times do |y|
-            tex_y = tex_pos.to_i! & (image.height - 1)
-            tex_pos += step
-            color = Raylib.get_image_color(image, tex_x, tex_y)
-            if side == 0
-              color.r /= 2
-              color.g /= 2
-              color.b /= 2
-            end
+          tex_y = tex_pos.to_i! & (texture.height - 1)
 
-            Raylib.draw_pixel(x, y + draw_start, color)
-          end
-
-          floor_x_wall = 0.0
-          floor_y_wall = 0.0
-
-          if side == 0 && ray_dir_x > 0
-            floor_x_wall = map_x
-            floor_y_wall = map_y + wall_x
-          elsif side == 0 && ray_dir_x < 0
-            floor_x_wall = map_x + 1.0
-            floor_y_wall = map_y + wall_x
-          elsif side == 1 && ray_dir_y > 0
-            floor_x_wall = map_x + wall_x
-            floor_y_wall = map_y
-          else
-            floor_x_wall = map_x + wall_x
-            floor_y_wall = map_y + 1.0
-          end
-
-          draw_end = Render.game_height if draw_end < 0
-
-          (Render.game_height - draw_end + 1).to_i.times do |y|
-            y += draw_end + 1
-            weight = @@horz_weight_precomputed[y.to_i] / perp_wall_dist
-
-            current_floor_x = weight * floor_x_wall + (1.0 - weight) * player.object.x
-            current_floor_y = weight * floor_y_wall + (1.0 - weight) * player.object.y
-
-            unless Map::MapFloors.new(map.floors[current_floor_x.to_i + current_floor_y.to_i*map.size_x]) == Map::MapFloors::None
-              floor_image = map.loaded_floor_images[Map.floor_textures[Map::MapFloors.new(map.floors[current_floor_x.to_i + current_floor_y.to_i*map.size_x])]]
-
-              floor_tex_x = (current_floor_x * floor_image.width).to_i % floor_image.width
-              floor_tex_y = (current_floor_y * floor_image.height).to_i % floor_image.height
-
-              Raylib.draw_pixel(x, y - 1, Raylib.get_image_color(floor_image, floor_tex_x, floor_tex_y))
-            end
-
-            unless Map::MapFloors.new(map.ceilings[current_floor_x.to_i + current_floor_y.to_i*map.size_x]) == Map::MapFloors::None
-              ceil_image = map.loaded_floor_images[Map.floor_textures[Map::MapFloors.new(map.ceilings[current_floor_x.to_i + current_floor_y.to_i*map.size_x])]]
-
-              ceil_tex_x = (current_floor_x * ceil_image.width).to_i % ceil_image.width
-              ceil_tex_y = (current_floor_y * ceil_image.height).to_i % ceil_image.height
-
-              Raylib.draw_pixel(x, Render.game_height - y, Raylib.get_image_color(ceil_image, ceil_tex_x, ceil_tex_y))
-            end
-          end
+          Raylib.draw_texture_pro(
+            texture,
+            Raylib::Rectangle.new(x: tex_x, y: tex_y, width: 1, height: texture.height),
+            Raylib::Rectangle.new(x: x, y: draw_start, width: 1, height: (draw_end - draw_start)),
+            Raylib::Vector2.new, 0.0, Raylib::WHITE)
         end
       end
     end

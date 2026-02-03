@@ -22,8 +22,6 @@ module Raycast
       player = Player.spawn(@objects)
       Raylib.disable_cursor
 
-      Render::Software.precompute
-
       while !Raylib.close_window?
         player.process_inputs(map, Raylib.get_frame_time)
 
