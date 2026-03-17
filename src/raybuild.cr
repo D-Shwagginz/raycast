@@ -11,6 +11,19 @@ begin
   FileUtils.rm_r("./bin/release/#{architecture}")
 rescue File::NotFoundError
 end
-puts `xcopy .\\rsrc\\ .\\bin\\release\\#{architecture}\\ /S /E`
+
+filename = ""
+
+{% if flag?(:unix) %}
+  puts `mkdir -p ./bin/release/#{architecture}`
+  puts `cp -r ./rsrc/. ./bin/release/#{architecture}/`
+  filename = "raycast"
+{% elsif flag?(:windows) %}
+  puts `xcopy .\\rsrc\\ .\\bin\\release\\#{architecture}\\ /S /E`
+  filename = "raycast.exe"
+{% end %}
+
+
 puts `shards build raycast --release --no-debug`
-FileUtils.cp("./bin/raycast.exe", "./bin/release/#{architecture}")
+
+FileUtils.cp("./bin/#{filename}", "./bin/release/#{architecture}")
