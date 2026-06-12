@@ -17,21 +17,25 @@ filename = ""
 {% if flag?(:unix) %}
   puts `mkdir -p ./bin/release/#{architecture}`
   puts `cp -r ./rsrc/. ./bin/release/#{architecture}/`
+  puts `rm ./bin/release/#{architecture}/raylib.dll`
   filename = "raycast"
 {% elsif flag?(:windows) %}
   puts `xcopy .\\rsrc\\ .\\bin\\release\\#{architecture}\\ /S /E`
+  puts `del .\\bin\\release\\#{architecture}\\libgc.1.dylib`
   filename = "raycast.exe"
 {% end %}
 
 
-puts `shards build raycast --release --no-debug `
+puts `shards build raycast --release --no-debug`
 
 FileUtils.cp("./bin/#{filename}", "./bin/release/#{architecture}")
 
 {% if flag?(:darwin) %}
-  puts `rm ./bin/release/arm/raylib.dll`
   puts `install_name_tool -change /opt/homebrew/opt/bdw-gc/lib/libgc.1.dylib "./libgc.1.dylib" ./bin/release/arm/raycast`
   puts `echo -e "#!/bin/sh\nset -e\ncd ./arm\nexec ./raycast" > ./raycast.sh`
-  puts `platypus -a Raycast -u "Devin Shwagginz" -I org.devinshwagginz.raycast -f ./bin/release/arm -B -R -o "None" ./raycast.sh ./bin/release/arm/Raycast.app`
+  puts `platypus -a Raycast -u "Devin Shwagginz" -I org.devinshwagginz.raycast -f ./bin/release/arm -B -R -o "None" ./raycast.sh ./bin/release/Raycast.app`
   puts `rm ./raycast.sh`
+  puts `rm -r ./bin/release/arm`
+  puts `mkdir ./bin/release/arm`
+  puts `mv ./bin/release/Raycast.app ./bin/release/arm/`
 {% end %}
