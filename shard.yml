@@ -12,7 +12,7 @@ targets:
 
 dependencies:
   raylib-cr:
-    github: sol-vin/raylib-cr
+    github: d-shwagginz/raylib-cr
 
 crystal: '>= 1.19.1'
 
